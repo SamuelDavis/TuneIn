@@ -56,3 +56,52 @@ require_once( 'library/gutenberg.php' );
 
 /** If your site requires protocol relative url's for theme assets, uncomment the line below */
 // require_once( 'library/class-foundationpress-protocol-relative-theme-assets.php' );
+
+if (!function_exists("get_related_resources")) {
+    function get_related_resources(WP_Post $post) {
+        /** @var WP_Term[] $categories */
+        $categories = array_reduce(get_categories(), function (array $acc, WP_Term $category) {
+            return $acc + [$category->term_id => $category];
+        }, []);
+
+        $categorySlugs = array_map(function (WP_Term $category) {
+            return $category->slug;
+        }, $categories);
+
+        $categoryHierarchy = array_reduce($categories, function (array $acc, WP_Term $category) {
+            if (!array_key_exists($category->parent, $acc)) {
+                $acc[$category->parent] = [];
+            }
+            if (!in_array($category->term_id, $acc[$category->parent])) {
+                $acc[$category->parent][] = $category->term_id;
+            }
+            return $acc;
+        }, []);
+
+        $leafCategories = array_filter(array_keys($categories), function ($id) use ($categoryHierarchy) {
+            return empty($categoryHierarchy[$id]);
+        });
+
+        $resourceLeafCategories = array_filter($leafCategories, function ($categoryId) use ($categories) {
+            $term = $categories[$categoryId];
+            while(true) {
+                if ($term->slug === 'resources') {
+                    return true;
+                }
+                if (!array_key_exists($term->parent, $categories)) {
+                    break;
+                }
+
+                $term = $categories[$term->parent];
+            }
+
+            return false;
+        });
+
+        return (new WP_Query())->query([
+            'cat' => implode(',', $resourceLeafCategories),
+            'post__not_in' => [$post->ID],
+        ]);
+
+    }
+}
