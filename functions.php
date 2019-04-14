@@ -57,6 +57,15 @@ require_once( 'library/gutenberg.php' );
 /** If your site requires protocol relative url's for theme assets, uncomment the line below */
 // require_once( 'library/class-foundationpress-protocol-relative-theme-assets.php' );
 
+if (!function_exists("get_the_archive_type")) {
+    function get_the_archive_type(WP_Query $query) {
+        if ($query->is_tag()) return "Tag";
+        if ($query->is_category()) return "Category";
+        if ($query->is_date()) return "Date";
+        return "Archive";
+    }
+}
+
 if (!function_exists("get_related_resources")) {
     function get_related_resources(WP_Post $post) {
         /** @var WP_Term[] $categories */
